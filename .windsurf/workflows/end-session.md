@@ -1,19 +1,21 @@
 ﻿---
-description: Avsluta utvecklingssession för Godot Engine
+description: Avsluta utvecklingssession med full dokumentationssynk
+auto_execution_mode: 1
 ---
 
 # End Session Workflow
 
-> Avsluta session med dokumentation
+> Komplett sessionsavslutning med dokumentation
 
-## 1. Git Status
+## 1. Session Info
 
 // turbo
 ```powershell
-Write-Host "=== SESSION END ===" -ForegroundColor Cyan
-Write-Host "
-Git Status:" -ForegroundColor Yellow
-git status --short
+$today = Get-Date -Format 'yyyy-MM-dd'
+$time = Get-Date -Format 'HH:mm'
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "=== SESSION END: $today $time ===" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
 ```
 
 ---
@@ -22,88 +24,155 @@ git status --short
 
 // turbo
 ```powershell
-$changes = git status --porcelain
-if ($changes) {
-    Write-Host "
-Uncommitted changes:" -ForegroundColor Red
-    Write-Host $changes
-    Write-Host "
-Consider committing or stashing before leaving!"
-} else {
-    Write-Host "
-No uncommitted changes" -ForegroundColor Green
-}
+Write-Host "`n=== UNCOMMITTED CHANGES ===" -ForegroundColor Yellow
+git status --short
+$changes = git status --porcelain | Measure-Object -Line
+Write-Host "`nÄndrade filer: $($changes.Lines)" -ForegroundColor Cyan
 ```
 
 ---
 
-## 3. Session Summary
+## 3. Dagens Commits
 
 // turbo
 ```powershell
-Write-Host "
-=== SESSION COMMITS ===" -ForegroundColor Yellow
+Write-Host "`n=== COMMITS DENNA SESSION ===" -ForegroundColor Yellow
 git log --oneline --since="8 hours ago" --format="%h %s"
+$commits = git log --oneline --since="8 hours ago" | Measure-Object -Line
+Write-Host "`nAntal commits: $($commits.Lines)" -ForegroundColor Cyan
 ```
 
 ---
 
-## 4. Build Verification
+## 4. Commit Stats
 
 // turbo
 ```powershell
-Write-Host "
-=== BUILD STATUS ===" -ForegroundColor Yellow
-if (Test-Path "bin\godot.windows.editor.x86_64.exe") {
-    $lastBuild = (Get-Item "bin\godot.windows.editor.x86_64.exe").LastWriteTime
-    Write-Host "Last build: $lastBuild" -ForegroundColor Green
-} else {
-    Write-Host "No build found" -ForegroundColor Red
-}
+Write-Host "`n=== ÄNDRINGSSTATISTIK ===" -ForegroundColor Yellow
+git diff --stat HEAD~1 2>$null
 ```
 
 ---
 
-## 5. Handoff Notes
+## 5. Uppdatera DEVLOG
 
-### Session Summary Template
+**KRITISKT:** Lägg till i `docs/dev/DEVLOG.md`:
+
 ```markdown
-## Session YYYY-MM-DD
+## YYYY-MM-DD
 
-### Completed
-- [ ] Task 1
-- [ ] Task 2
+### Session (HH:MM-HH:MM) - [Focus]
 
-### In Progress
-- [ ] Task 3 - Status/blockers
-
-### Next Steps
-- Priority 1
-- Priority 2
-
-### Notes
-- Important findings
-- Decisions made
+- `HASH` type(scope): beskrivning
+  - **Nya filer:** Lista nya filer
+  - **Ändrade filer:** Lista ändrade
+  - **Statistik:** X filer, +A/-B rader
+  - **Features:** Beskriv nya features
+  - **Verifierat:** Vad som testats
 ```
 
 ---
 
-## 6. Cleanup
+## 6. Uppdatera CHANGELOG
 
-```powershell
-# Stash uncommitted work (optional)
-git stash push -m "WIP: session end"
+Under `[Unreleased]` i `docs/CHANGELOG.md`:
 
-# Or commit WIP
-git add .
-git commit -m "wip: session checkpoint"
+```markdown
+### Added
+- Feature beskrivning
+
+### Changed
+- Ändring beskrivning
+
+### Fixed
+- Buggfix beskrivning
 ```
 
 ---
 
-## 7. Session End Checklista
+## 7. Slutför Session Report
 
+Uppdatera `docs/dev/sessions/YYYY-MM-DD.md`:
+
+```markdown
+## Session Sammanfattning
+
+**Duration:** X timmar
+**Commits:** Y st
+**Lines:** +A / -B
+
+---
+
+## Utfört Arbete
+
+### Klart
+- [x] Uppgift 1
+- [x] Uppgift 2
+
+### Delvis Klart
+- [ ] Uppgift 3 - [Status]
+
+---
+
+## Handoff Notes
+
+### Nuvarande Status
+- [Vad är klart]
+
+### Nästa Prioritet
+- [Vad ska göras härnäst]
+
+### Varningar
+- [Saker att vara medveten om]
+```
+
+---
+
+## 8. Final Checklista
+
+### Dokumentation
+- [ ] DEVLOG uppdaterad med alla commits
+- [ ] CHANGELOG uppdaterad (om features/fixes)
+- [ ] Session report slutförd
+
+### Kod
 - [ ] Alla viktiga ändringar committed
-- [ ] Build fungerar
+- [ ] Inga kritiska uncommitted changes
+
+### Handoff
 - [ ] Handoff notes skrivna
-- [ ] Inga kritiska issues lämnade
+- [ ] Nästa prioritet identifierad
+
+---
+
+## 9. Annonsera Session Slut
+
+// turbo
+```powershell
+Write-Host "`n============================================" -ForegroundColor Green
+Write-Host "=== SESSION COMPLETE ===" -ForegroundColor Green
+Write-Host "============================================" -ForegroundColor Green
+$commits = git log --oneline --since="8 hours ago" | Measure-Object -Line
+Write-Host "Commits: $($commits.Lines)"
+Write-Host "Ready for handoff: YES"
+```
+
+---
+
+## Dokumentationsmatris
+
+| Ändring | Uppdatera |
+|---------|-----------|
+| Ny feature | DEVLOG + CHANGELOG + Session |
+| Bugfix | DEVLOG + CHANGELOG |
+| Refactoring | DEVLOG + Session |
+| Ny fil/klass | DEVLOG med sökväg |
+| Config-ändring | DEVLOG |
+
+---
+
+## ⚠️ VIKTIGA REGLER
+
+1. **ALDRIG git commit/push utan explicit instruktion**
+2. **DOKUMENTERA ALLT** - Nästa session ska förstå vad som gjordes
+3. **DEVLOG är primär** - Var noggrann och detaljerad

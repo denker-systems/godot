@@ -1,10 +1,11 @@
 ﻿---
-description: Starta en utvecklingssession för Godot Engine
+description: Starta en utvecklingssession med full kontextladdning
+auto_execution_mode: 1
 ---
 
 # Init Session Workflow
 
-> Komplett sessioninitiering för Godot Engine utveckling
+> Komplett sessioninitiering för Godot Plugins utveckling
 
 ## 1. Session Info
 
@@ -24,11 +25,9 @@ Write-Host "============================================" -ForegroundColor Cyan
 
 // turbo
 ```powershell
-Write-Host "
-=== GIT STATUS ===" -ForegroundColor Yellow
+Write-Host "`n=== GIT STATUS ===" -ForegroundColor Yellow
 git status --short
-Write-Host "
-Current Branch: $(git branch --show-current)" -ForegroundColor Green
+Write-Host "`nCurrent Branch: $(git branch --show-current)" -ForegroundColor Green
 ```
 
 ---
@@ -37,88 +36,163 @@ Current Branch: $(git branch --show-current)" -ForegroundColor Green
 
 // turbo
 ```powershell
-Write-Host "
-=== SENASTE 10 COMMITS ===" -ForegroundColor Yellow
+Write-Host "`n=== SENASTE 10 COMMITS ===" -ForegroundColor Yellow
 git log --oneline -10 --format="%h %an: %s (%ar)"
 ```
 
 ---
 
-## 4. Build Status Check
+## 4. Föregående Session
 
 // turbo
 ```powershell
-Write-Host "
-=== BUILD CHECK ===" -ForegroundColor Yellow
+Write-Host "`n=== FÖREGÅENDE SESSION ===" -ForegroundColor Yellow
+$latest = Get-ChildItem docs/dev/sessions/*.md -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+if ($latest) { 
+    Write-Host "Fil: $($latest.Name)" -ForegroundColor Cyan
+    Get-Content $latest.FullName | Select-Object -First 30
+} else {
+    Write-Host "Ingen session report hittad" -ForegroundColor Gray
+}
+```
+
+---
+
+## 5. DEVLOG Status
+
+// turbo
+```powershell
+Write-Host "`n=== DEVLOG (senaste) ===" -ForegroundColor Yellow
+if (Test-Path "docs/dev/DEVLOG.md") {
+    Get-Content docs/dev/DEVLOG.md | Select-Object -First 40
+} else {
+    Write-Host "Ingen DEVLOG.md - skapa docs/dev/DEVLOG.md" -ForegroundColor Red
+}
+```
+
+---
+
+## 6. ROADMAP Check
+
+// turbo
+```powershell
+Write-Host "`n=== ROADMAP ===" -ForegroundColor Yellow
+$roadmap = Get-ChildItem -Recurse -Filter "ROADMAP.md" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($roadmap) {
+    Get-Content $roadmap.FullName | Select-Object -First 50
+} else {
+    Write-Host "Ingen ROADMAP.md hittad" -ForegroundColor Gray
+}
+```
+
+---
+
+## 7. Build Status
+
+// turbo
+```powershell
+Write-Host "`n=== BUILD CHECK ===" -ForegroundColor Yellow
 if (Test-Path "bin\godot.windows.editor.x86_64.exe") {
-    Write-Host "Editor executable exists" -ForegroundColor Green
     $lastBuild = (Get-Item "bin\godot.windows.editor.x86_64.exe").LastWriteTime
-    Write-Host "Last build: $lastBuild"
+    Write-Host "Editor build: $lastBuild" -ForegroundColor Green
 } else {
-    Write-Host "No editor build found - run /build" -ForegroundColor Red
+    Write-Host "No editor build - run /build" -ForegroundColor Yellow
 }
 ```
 
 ---
 
-## 5. Modules Plan Check
+## 8. Skapa Session Report
 
-// turbo
-```powershell
-Write-Host "
-=== MODULES PLAN ===" -ForegroundColor Yellow
-if (Test-Path "modules_plan.md") {
-    Get-Content modules_plan.md | Select-Object -First 30
-} else {
-    Write-Host "No modules_plan.md found" -ForegroundColor Gray
-}
+Skapa `docs/dev/sessions/YYYY-MM-DD.md`:
+
+```markdown
+# Session YYYY-MM-DD
+
+**Developer:** [Namn]
+**Branch:** [branch-name]
+**Start:** HH:MM
+**Focus:** [Dagens huvuduppgift]
+
+---
+
+## Sessionsmål
+
+- [ ] Mål 1
+- [ ] Mål 2
+
+---
+
+## Progress Log
+
+### HH:MM - Session Start
+- Branch: [branch]
+- Build: [OK/FAIL]
+
+### HH:MM - [Aktivitet]
+- [Vad gjordes]
+
+---
+
+## Commits Denna Session
+
+| Hash | Type | Scope | Beskrivning |
+|------|------|-------|-------------|
+
+---
+
+## Handoff Notes
+
+### Nuvarande Status
+- [Status]
+
+### Nästa Prioritet
+- [Prioritet]
 ```
 
 ---
 
-## 6. Kör Editor (Smoke Test)
-
-```powershell
-.\bin\godot.windows.editor.x86_64.exe
-```
-
----
-
-## 7. Session Checklista
+## 9. Checklista
 
 ### Obligatoriskt
 - [ ] Git status kontrollerad
 - [ ] Inga kritiska uncommitted changes
-- [ ] Editor build finns
+- [ ] Föregående session läst
 
 ### Rekommenderat
-- [ ] modules_plan.md granskad
+- [ ] DEVLOG granskad
+- [ ] ROADMAP kollad
+- [ ] Session report skapad
 - [ ] Dagens mål identifierade
 
 ---
 
 ## Quick Reference
 
-### Godot Struktur
+### Projekt Struktur
 ```
 godot/
- core/           # Engine core
- servers/        # Backend services
- scene/          # Node system
- modules/        # Optional modules
- editor/         # Editor code
- platform/       # Platform code
- bin/            # Build output
+├── addons/           # EditorPlugins (GDScript)
+│   └── story_builder/
+├── modules/          # C++ modules
+├── plugins/          # GDExtension plugins
+├── docs/
+│   ├── dev/
+│   │   ├── DEVLOG.md
+│   │   └── sessions/
+│   └── CHANGELOG.md
+└── .windsurf/workflows/
 ```
 
 ### Vanliga Kommandon
 ```powershell
-# Build
+# Build Godot
 python -m SCons platform=windows target=editor -j8
 
 # Kör Editor
 .\bin\godot.windows.editor.x86_64.exe
 
-# Git status
+# Git
 git status --short
+git log --oneline -5
 ```
