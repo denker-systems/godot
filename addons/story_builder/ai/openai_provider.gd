@@ -17,6 +17,10 @@ func chat(messages: Array, system_prompt: String) -> void:
 		request_failed.emit("OpenAI API key is missing.")
 		return
 
+	var resolved_model = model_name
+	if resolved_model.is_empty():
+		resolved_model = "gpt-4o"
+
 	var headers = [
 		"Content-Type: application/json",
 		"Authorization: Bearer " + api_key
@@ -26,7 +30,7 @@ func chat(messages: Array, system_prompt: String) -> void:
 	formatted_messages.append_array(messages)
 
 	var body = {
-		"model": "gpt-4o",
+		"model": resolved_model,
 		"messages": formatted_messages,
 		"response_format": { "type": "json_object" } if "JSON" in system_prompt else null
 	}

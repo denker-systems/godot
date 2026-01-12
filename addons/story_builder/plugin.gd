@@ -1,4 +1,4 @@
-# @tool
+@tool
 extends EditorPlugin
 
 const ChatPanel = preload("res://addons/story_builder/ui/chat_panel.tscn")

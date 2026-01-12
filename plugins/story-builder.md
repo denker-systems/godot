@@ -83,18 +83,49 @@ res://
 
 ## Teknisk Arkitektur
 
-### Stack Decision: GDScript EditorPlugin (INTE GDExtension)
+### Stack Decision: GDScript EditorPlugin
 
 **Varför GDScript:**
-- ✅ Native `HTTPRequest` för AI API calls
-- ✅ Built-in JSON parsing
-- ✅ `PackedScene` + `ResourceSaver` för scene generation
-- ✅ `DirAccess` + `FileAccess` för file operations
-- ✅ EditorPlugin API fullt tillgängligt
-- ✅ Snabbare iteration (ingen C++ compilation)
-- ✅ Enklare för community att bidra
+- ✅ Native `HTTPRequest` för AI API calls.
+- ✅ Inbyggd JSON-parsing för strukturerad AI-output.
+- ✅ `PackedScene` + `ResourceSaver` för programmatisk scengenerering.
+- ✅ Full tillgång till `EditorInterface` och `EditorSettings`.
+- ✅ Ingen kompilering krävs, vilket ger snabbare iteration.
 
-**GDExtension skulle vara overkill här** - all funktionalitet vi behöver finns i GDScript.
+### Komponenter
+
+1.  **AI Providers**: Modulär design för Anthropic, OpenAI och Gemini. Varje leverantör hanterar sin egen API-specifika formatering.
+2.  **Conversation Manager**: Hanterar meddelandehistorik, kontext och extraherar JSON-data från AI-svar.
+3.  **Scaffolding Engine**:
+    *   `FolderBuilder`: Skapar mappstrukturen.
+    *   `AssetBuilder`: Genererar placeholder-sprites som PNG-filer.
+    *   `ScriptBuilder`: Skapar GDScripts baserat på mallar med variabelersättning.
+    *   `SceneBuilder`: Bygger komplexa .tscn-filer programmatiskt.
+    *   `ProjectUpdater`: Uppdaterar `project.godot` med Autoloads och Input Map-inställningar.
+4.  **UI System**:
+    *   `ChatPanel`: Huvudgränssnittet i Godots bottenpanel.
+    *   `SettingsDialog`: Hanterar API-nycklar och val av AI-leverantör via `EditorSettings`.
+    *   `ConfirmationDialog`: Visar en trädvy-preview av projektet innan generering.
+
+---
+
+## Installation & Användning
+
+1.  Kopiera mappen `addons/story_builder` till ditt Godot-projekts `addons/`-mapp.
+2.  Aktivera pluginet under **Project -> Project Settings -> Plugins**.
+3.  Öppna **Story Builder**-panelen längst ner i editorn.
+4.  Klicka på **Settings** och fyll i din API-nyckel.
+5.  Börja chatta! Beskriv ditt spel och låt AI:n sköta resten.
+
+---
+
+## Status för implementation (2026-01-12)
+
+- ✅ **Fas 1-5**: Kompletta och testade.
+- ✅ **Multi-Provider**: Stöd för Claude 3.5, GPT-4o och Gemini 1.5 Pro.
+- ✅ **Persistence**: Historik sparas i `user://` och nycklar i `EditorSettings`.
+- ✅ **Templates**: Innehåller rörelse, AI, HUD, och Game Manager.
+- ✅ **UI**: Progress bar, trädvy-preview och rensning av historik.
 
 ---
 

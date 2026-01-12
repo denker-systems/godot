@@ -1,4 +1,4 @@
-# @tool
+@tool
 extends ConfirmationDialog
 
 signal confirmed_generation(data: Dictionary)

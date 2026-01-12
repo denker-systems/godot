@@ -4,6 +4,8 @@ extends "res://addons/story_builder/ai/ai_provider.gd"
 const API_URL = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_VERSION = "2023-06-01"
 
+const DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
+
 var http_request: HTTPRequest
 
 func _init(p_http_request: HTTPRequest) -> void:
@@ -13,10 +15,23 @@ func _init(p_http_request: HTTPRequest) -> void:
 func get_name() -> String:
 	return "Anthropic"
 
+func get_available_models() -> Array[String]:
+	return [
+		"claude-sonnet-4-5-20250929",   # Best for agents and coding
+		"claude-sonnet-4-20250514",     # High-performance with extended thinking
+		"claude-3-5-haiku-20241022",    # Fast, cost-effective
+		"claude-3-opus-20240229"        # Most capable Claude 3
+	]
+
 func chat(messages: Array, system_prompt: String) -> void:
 	if api_key.is_empty():
 		request_failed.emit("Anthropic API key is missing.")
 		return
+
+	# Use configured model or default
+	var resolved_model = model_name if not model_name.is_empty() else DEFAULT_MODEL
+	
+	print("[Anthropic] Using model: ", resolved_model)
 
 	var headers = [
 		"Content-Type: application/json",
@@ -25,12 +40,13 @@ func chat(messages: Array, system_prompt: String) -> void:
 	]
 
 	var body = {
-		"model": "claude-3-5-sonnet-20241022",
+		"model": resolved_model,
 		"max_tokens": 4096,
 		"system": system_prompt,
 		"messages": messages
 	}
 
+	print("[Anthropic] Sending request...")
 	var error = http_request.request(API_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
 	if error != OK:
 		request_failed.emit("Failed to send request to Anthropic: " + str(error))

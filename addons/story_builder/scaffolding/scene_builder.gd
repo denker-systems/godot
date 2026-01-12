@@ -44,17 +44,44 @@ func build_scenes(scenes: Array) -> void:
 			printerr("[Story Builder] Failed to create scene: ", path, " Error: ", err)
 
 func _create_node(type: String) -> Node:
-	# This is a bit tricky programmatically. 
-	# In a full version, we'd use ClassDB or a mapping.
 	match type:
 		"Node2D": return Node2D.new()
 		"CharacterBody2D": return CharacterBody2D.new()
-		"Sprite2D": return Sprite2D.new()
-		"CollisionShape2D": return CollisionShape2D.new()
+		"StaticBody2D": return StaticBody2D.new()
+		"RigidBody2D": return RigidBody2D.new()
 		"Area2D": return Area2D.new()
+		"Sprite2D": return Sprite2D.new()
+		"AnimatedSprite2D": return AnimatedSprite2D.new()
+		"CollisionShape2D": return CollisionShape2D.new()
+		"CollisionPolygon2D": return CollisionPolygon2D.new()
+		"RayCast2D": return RayCast2D.new()
 		"Camera2D": return Camera2D.new()
+		"RemoteTransform2D": return RemoteTransform2D.new()
+		"Node3D": return Node3D.new()
+		"CharacterBody3D": return CharacterBody3D.new()
+		"StaticBody3D": return StaticBody3D.new()
+		"Camera3D": return Camera3D.new()
 		"Control": return Control.new()
-		"CanvasLayer": return CanvasLayer.new()
-		"RichTextLabel": return RichTextLabel.new()
 		"Button": return Button.new()
+		"Label": return Label.new()
+		"LineEdit": return LineEdit.new()
+		"Panel": return Panel.new()
+		"MarginContainer": return MarginContainer.new()
+		"VBoxContainer": return VBoxContainer.new()
+		"HBoxContainer": return HBoxContainer.new()
+		"ScrollContainer": return ScrollContainer.new()
+		"TextureRect": return TextureRect.new()
+		"ColorRect": return ColorRect.new()
+		"RichTextLabel": return RichTextLabel.new()
+		"CanvasLayer": return CanvasLayer.new()
+		"ParallaxBackground": return ParallaxLayer.new()
+		"AnimationPlayer": return AnimationPlayer.new()
+		"AudioStreamPlayer": return AudioStreamPlayer.new()
+		"Marker2D": return Marker2D.new()
+		"GPUParticles2D": return GPUParticles2D.new()
+	
+	# Attempt to use ClassDB for anything not matched
+	if ClassDB.class_exists(type):
+		return ClassDB.instantiate(type)
+		
 	return Node2D.new()

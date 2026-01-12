@@ -1,14 +1,15 @@
-# @tool
+@tool
 extends Control
 
 @onready var chat_history: RichTextLabel = %ChatHistory
 @onready var input_field: LineEdit = %InputField
 @onready var send_button: Button = %SendButton
 @onready var settings_button: Button = %SettingsButton
+@onready var clear_button: Button = %ClearButton
 @onready var generation_progress: ProgressBar = %GenerationProgress
 
-const SettingsDialog = preload("res://addons/story_builder/ui/settings_dialog.tscn")
-const ConfirmationDialog = preload("res://addons/story_builder/ui/confirmation_dialog.tscn")
+const SettingsDialogScene = preload("res://addons/story_builder/ui/settings_dialog.tscn")
+const ConfirmationDialogScene = preload("res://addons/story_builder/ui/confirmation_dialog.tscn")
 
 var provider: RefCounted
 var conversation_manager: RefCounted
@@ -18,39 +19,46 @@ var confirmation_dialog: Window
 var project_generator: RefCounted
 
 var current_provider_name: String = "Anthropic"
+var current_model_name: String = ""
 var api_keys: Dictionary = {
 	"Anthropic": "",
 	"OpenAI": "",
 	"Gemini": ""
 }
 
-const SETTING_PATH = "user://story_builder_settings.cfg"
+const SETTINGS_PREFIX = "plugins/story_builder/"
 
 func _ready() -> void:
+	if not input_field:
+		return # Guard for tool mode
+	
+	# Koppla signaler
 	input_field.text_submitted.connect(_on_input_submitted)
 	send_button.pressed.connect(_on_send_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
+	clear_button.pressed.connect(_on_clear_pressed)
 	
-	# Setup Scaffolding
+	# Initiera Scaffolding
 	var ProjectGenerator = load("res://addons/story_builder/scaffolding/project_generator.gd")
 	project_generator = ProjectGenerator.new()
 	project_generator.progress_updated.connect(_on_progress_updated)
 	
-	# Setup HTTPRequest
+	# Initiera HTTPRequest
 	http_request = HTTPRequest.new()
 	add_child(http_request)
 	
-	# Setup Settings Dialog
-	settings_dialog = SettingsDialog.instantiate()
+	# Initiera Settings Dialog
+	settings_dialog = SettingsDialogScene.instantiate()
 	add_child(settings_dialog)
 	settings_dialog.settings_saved.connect(_on_settings_saved)
 	
-	# Load settings
+	# Ladda inställningar
 	_load_settings()
 	
-	# Initial Provider Setup
+	# Initiera AI Provider
 	_setup_provider(current_provider_name)
 	
+	# Initiera Conversation Manager
 	var ConversationManager = load("res://addons/story_builder/ai/conversation_manager.gd")
 	var system_prompt = _load_system_prompt()
 	conversation_manager = ConversationManager.new(provider, system_prompt)
@@ -59,84 +67,120 @@ func _ready() -> void:
 	conversation_manager.error_occurred.connect(func(err): add_message("Error", err))
 	conversation_manager.generation_ready.connect(_on_generation_ready)
 	
-	# Setup Confirmation Dialog
-	confirmation_dialog = ConfirmationDialog.instantiate()
+	# Initiera Confirmation Dialog
+	confirmation_dialog = ConfirmationDialogScene.instantiate()
 	add_child(confirmation_dialog)
 	confirmation_dialog.confirmed_generation.connect(_on_confirmed_generation)
 	
+	# Ladda historik
 	_load_chat_history()
 	
-	add_message("System", "Welcome to Story Builder! Describe the game you want to create.")
+	if chat_history.get_parsed_text().strip_edges().is_empty():
+		add_message("System", "Welcome to Story Builder! Describe the game you want to create.")
+	
+	_check_api_status()
+
+func _check_api_status() -> void:
 	if api_keys[current_provider_name].is_empty():
 		add_message("System", "[color=yellow]Warning: " + current_provider_name + " API key not set. Click 'Settings' to configure.[/color]")
+	else:
+		add_message("System", "[color=green]Ready: Using " + current_provider_name + " provider.[/color]")
 
-func _setup_provider(provider_name: String) -> void:
+func _setup_provider(p_name: String) -> void:
 	var provider_script
-	match provider_name:
+	match p_name:
 		"Anthropic":
 			provider_script = load("res://addons/story_builder/ai/anthropic_provider.gd")
 		"OpenAI":
 			provider_script = load("res://addons/story_builder/ai/openai_provider.gd")
 		"Gemini":
 			provider_script = load("res://addons/story_builder/ai/gemini_provider.gd")
+		_:
+			push_error("Unknown provider: " + p_name)
+			return
 	
 	provider = provider_script.new(http_request)
-	provider.api_key = api_keys.get(provider_name, "")
+	provider.api_key = api_keys.get(p_name, "")
+	provider.model_name = current_model_name
 	
 	if conversation_manager:
-		# Update provider in existing manager
 		conversation_manager.provider = provider
-		# Reconnect signals
-		provider.request_completed.connect(conversation_manager._on_ai_response)
-		provider.request_failed.connect(conversation_manager._on_ai_error)
+		# Återanslut signaler om de tappats
+		if not provider.request_completed.is_connected(conversation_manager._on_ai_response):
+			provider.request_completed.connect(conversation_manager._on_ai_response)
+		if not provider.request_failed.is_connected(conversation_manager._on_ai_error):
+			provider.request_failed.connect(conversation_manager._on_ai_error)
 
 func _load_settings() -> void:
-	var config = ConfigFile.new()
-	var err = config.load(SETTING_PATH)
-	if err == OK:
-		current_provider_name = config.get_value("settings", "provider", "Anthropic")
-		api_keys["Anthropic"] = config.get_value("keys", "Anthropic", "")
-		api_keys["OpenAI"] = config.get_value("keys", "OpenAI", "")
-		api_keys["Gemini"] = config.get_value("keys", "Gemini", "")
-	else:
-		# Try environment for backward compatibility
-		api_keys["Anthropic"] = OS.get_environment("ANTHROPIC_API_KEY")
+	var settings = EditorInterface.get_editor_settings()
+	
+	if settings.has_setting(SETTINGS_PREFIX + "active_provider"):
+		current_provider_name = settings.get_setting(SETTINGS_PREFIX + "active_provider")
+	
+	if settings.has_setting(SETTINGS_PREFIX + "active_model"):
+		current_model_name = settings.get_setting(SETTINGS_PREFIX + "active_model")
+	
+	for p in api_keys:
+		var setting_path = SETTINGS_PREFIX + p.to_lower() + "_api_key"
+		if settings.has_setting(setting_path):
+			api_keys[p] = settings.get_setting(setting_path)
+		elif p == "Anthropic":
+			var env_key = OS.get_environment("ANTHROPIC_API_KEY")
+			if not env_key.is_empty():
+				api_keys[p] = env_key
+
+func _load_system_prompt() -> String:
+	var f = FileAccess.open("res://addons/story_builder/prompts/system_prompt.txt", FileAccess.READ)
+	if f:
+		return f.get_as_text()
+	return "You are a Godot game design assistant."
 
 func _on_settings_pressed() -> void:
-	settings_dialog.setup(current_provider_name, api_keys)
+	settings_dialog.setup(current_provider_name, current_model_name, api_keys)
 	settings_dialog.popup_centered()
 
-func _on_settings_saved(provider_name: String, keys: Dictionary) -> void:
-	current_provider_name = provider_name
-	api_keys = keys
+func _on_settings_saved(p_name: String, p_model: String, p_keys: Dictionary) -> void:
+	current_provider_name = p_name
+	current_model_name = p_model
+	api_keys = p_keys
 	
-	# Re-setup provider
 	_setup_provider(current_provider_name)
 	
-	# Save to config file
-	var config = ConfigFile.new()
-	config.set_value("settings", "provider", current_provider_name)
+	var settings = EditorInterface.get_editor_settings()
+	settings.set_setting(SETTINGS_PREFIX + "active_provider", current_provider_name)
+	settings.set_setting(SETTINGS_PREFIX + "active_model", current_model_name)
 	for p in api_keys:
-		config.set_value("keys", p, api_keys[p])
-	config.save(SETTING_PATH)
+		settings.set_setting(SETTINGS_PREFIX + p.to_lower() + "_api_key", api_keys[p])
 	
-	add_message("System", "Settings updated and saved. Active provider: " + current_provider_name)
+	add_message("System", "Settings saved. Provider: " + current_provider_name + ", Model: " + current_model_name)
+	_check_api_status()
+
+func _on_clear_pressed() -> void:
+	chat_history.clear()
+	if conversation_manager:
+		conversation_manager.messages = []
+	if FileAccess.file_exists("user://story_builder_history.json"):
+		DirAccess.remove_absolute("user://story_builder_history.json")
+	add_message("System", "Chat history cleared.")
 
 func _on_input_submitted(new_text: String) -> void:
-	if new_text.is_empty():
+	if new_text.strip_edges().is_empty():
 		return
 	send_message(new_text)
 
 func _on_send_pressed() -> void:
 	var text = input_field.text
-	if text.is_empty():
+	if text.strip_edges().is_empty():
 		return
 	send_message(text)
 
 func send_message(text: String) -> void:
 	add_message("You", text)
 	input_field.clear()
-	conversation_manager.send_user_message(text)
+	if conversation_manager:
+		conversation_manager.send_user_message(text)
+	else:
+		add_message("Error", "Conversation manager not initialized.")
 
 func add_message(sender: String, text: String) -> void:
 	var color = "#4A90E2" if sender == "You" else "#E2A04A"
@@ -147,6 +191,7 @@ func add_message(sender: String, text: String) -> void:
 	_save_chat_history()
 
 func _save_chat_history() -> void:
+	if not conversation_manager: return
 	var history_data = {
 		"messages": conversation_manager.messages
 	}
@@ -164,23 +209,40 @@ func _load_chat_history() -> void:
 		if json.parse(file.get_as_text()) == OK:
 			var data = json.get_data()
 			if data is Dictionary and data.has("messages"):
-				conversation_manager.messages = data["messages"]
-				for msg in conversation_manager.messages:
+				var loaded_messages = data["messages"]
+				if conversation_manager:
+					conversation_manager.messages = loaded_messages
+				for msg in loaded_messages:
 					var sender = "You" if msg["role"] == "user" else "AI"
 					add_message_silent(sender, msg["content"])
 
 func add_message_silent(sender: String, text: String) -> void:
 	var color = "#4A90E2" if sender == "You" else "#E2A04A"
 	if sender == "System": color = "#888888"
-	
 	chat_history.append_text("[color=" + color + "][b]" + sender + ":[/b][/color] " + text + "\n\n")
 
 func _on_generation_ready(project_data: Dictionary) -> void:
 	add_message("System", "AI has suggested a project structure! Opening confirmation dialog...")
-	confirmation_dialog.setup(project_data)
-	confirmation_dialog.popup_centered()
+	if confirmation_dialog:
+		confirmation_dialog.setup(project_data)
+		confirmation_dialog.popup_centered()
 
 func _on_confirmed_generation(project_data: Dictionary) -> void:
 	add_message("System", "Starting project generation...")
-	project_generator.generate(project_data)
-	add_message("System", "Project generated successfully! Check your FileSystem dock.")
+	generation_progress.show()
+	generation_progress.value = 0
+	
+	await get_tree().create_timer(0.1).timeout
+	
+	if project_generator:
+		project_generator.generate(project_data)
+		add_message("System", "Project generated successfully! Check your FileSystem dock.")
+	else:
+		add_message("Error", "Project generator not initialized.")
+		
+	await get_tree().create_timer(2.0).timeout
+	generation_progress.hide()
+
+func _on_progress_updated(step_name: String, percentage: float) -> void:
+	if generation_progress:
+		generation_progress.value = percentage

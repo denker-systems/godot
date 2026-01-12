@@ -1,0 +1,20 @@
+extends CharacterBody2D
+
+@export var speed: float = {{SPEED}}
+@export var detection_range: float = {{DETECTION_RANGE}}
+
+@onready var player = get_tree().get_first_node_in_group("player")
+
+func _physics_process(delta: float) -> void:
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+
+	if player:
+		var dist = global_position.distance_to(player.global_position)
+		if dist < detection_range:
+			var dir = global_position.direction_to(player.global_position)
+			velocity.x = dir.x * speed
+		else:
+			velocity.x = move_toward(velocity.x, 0, speed)
+
+	move_and_slide()
