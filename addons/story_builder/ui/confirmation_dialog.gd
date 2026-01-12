@@ -1,15 +1,18 @@
 @tool
-extends ConfirmationDialog
+extends Window
 
 signal confirmed_generation(data: Dictionary)
 
 @onready var tree: Tree = %StructureTree
+@onready var generate_button: Button = %GenerateButton
+@onready var cancel_button: Button = %CancelButton
 
 var project_data: Dictionary
 
 func _ready() -> void:
-	confirmed.connect(_on_confirmed)
-	canceled.connect(_on_canceled)
+	generate_button.pressed.connect(_on_confirmed)
+	cancel_button.pressed.connect(_on_canceled)
+	close_requested.connect(_on_canceled)
 
 func setup(data: Dictionary) -> void:
 	project_data = data
@@ -39,6 +42,7 @@ func setup(data: Dictionary) -> void:
 
 func _on_confirmed() -> void:
 	confirmed_generation.emit(project_data)
+	hide()
 
 func _on_canceled() -> void:
 	hide()

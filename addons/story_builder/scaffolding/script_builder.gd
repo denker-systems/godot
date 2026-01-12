@@ -14,6 +14,11 @@ func build_scripts(scripts: Array) -> void:
 		if content.is_empty():
 			# Fallback if template doesn't exist
 			content = "extends Node\n\n# Generated script: " + template_name + "\n"
+		
+		# Ensure parent directory exists
+		var dir_path = path.get_base_dir()
+		if not DirAccess.dir_exists_absolute(dir_path):
+			DirAccess.make_dir_recursive_absolute(dir_path)
 			
 		var file = FileAccess.open(path, FileAccess.WRITE)
 		if file:

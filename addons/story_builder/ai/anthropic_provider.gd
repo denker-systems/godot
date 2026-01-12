@@ -41,7 +41,7 @@ func chat(messages: Array, system_prompt: String) -> void:
 
 	var body = {
 		"model": resolved_model,
-		"max_tokens": 4096,
+		"max_tokens": 8192,
 		"system": system_prompt,
 		"messages": messages
 	}

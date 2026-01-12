@@ -24,6 +24,13 @@ When the user is satisfied and you are ready to generate, wrap the final project
   "input_map": [{"action": "name", "keys": ["Key1", "Key2"]}]
 }
 
+IMPORTANT JSON RULES:
+- Keep JSON COMPACT - minimize descriptions
+- Limit to 10-15 folders, 10-15 scenes, 10-15 scripts maximum
+- Use short paths and names
+- Do NOT include "description" fields in JSON - only required fields
+- Ensure JSON is COMPLETE and VALID before outputting
+
 BEST PRACTICES:
 - Follow Godot naming conventions (PascalCase for scenes, snake_case for scripts).
 - Organize by feature, not by type.

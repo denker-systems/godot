@@ -16,6 +16,11 @@ func build_assets(assets: Array) -> void:
 				_create_placeholder_sprite(path, size, color_hex)
 
 func _create_placeholder_sprite(path: String, size: Array, color_hex: String) -> void:
+	# Ensure parent directory exists
+	var dir_path = path.get_base_dir()
+	if not DirAccess.dir_exists_absolute(dir_path):
+		DirAccess.make_dir_recursive_absolute(dir_path)
+	
 	var width = size[0] if size.size() > 0 else 64
 	var height = size[1] if size.size() > 1 else 64
 	
