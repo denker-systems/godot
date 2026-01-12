@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://d3r4t5u6v7w8x"]
+
+[ext_resource type="Script" path="res://addons/story_builder/ui/confirmation_dialog.gd" id="1_c2d3e"]
+
+[node name="ConfirmationDialog" type="ConfirmationDialog"]
+title = "Confirm Generation"
+initial_position = 2
+size = Vector2i(500, 400)
+visible = false
+exclusive = true
+ok_button_text = "Generate Project"
+script = ExtResource("1_c2d3e")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 492.0
+offset_bottom = 351.0
+
+[node name="Label" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "The AI has proposed the following project structure. 
+Review it before proceeding with file creation."
+autowrap_mode = 3
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="StructureTree" type="Tree" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+hide_root = true
